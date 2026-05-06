@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Ralph for Claude Code - Global Installation Script
+# Ralph for Copilot CLI - Global Installation Script
+# Adapted from ralph-claude-code for use with GitHub Copilot CLI
 set -e
 
 # Configuration
@@ -81,13 +82,13 @@ check_dependencies() {
         fi
     fi
 
-    # Check Claude Code CLI availability
-    if command -v claude &>/dev/null; then
-        log "INFO" "Claude Code CLI found: $(command -v claude)"
+    # Check Copilot CLI availability
+    if command -v copilot &>/dev/null; then
+        log "INFO" "GitHub Copilot CLI found: $(command -v copilot)"
     else
-        log "WARN" "Claude Code CLI ('claude') not found in PATH."
-        log "INFO" "  Install globally: npm install -g @anthropic-ai/claude-code"
-        log "INFO" "  Or use npx: set CLAUDE_CODE_CMD=\"npx @anthropic-ai/claude-code\" in .ralphrc"
+        log "WARN" "GitHub Copilot CLI ('copilot') not found in PATH."
+        log "INFO" "  Install: npm install -g @github/copilot-cli"
+        log "INFO" "  Then authenticate: copilot auth"
     fi
 
     # Check tmux (optional)
@@ -125,7 +126,7 @@ install_scripts() {
     # Create the main ralph command
     cat > "$INSTALL_DIR/ralph" << 'EOF'
 #!/bin/bash
-# Ralph for Claude Code - Main Command
+# Ralph for Copilot CLI - Main Command
 
 RALPH_HOME="$HOME/.ralph"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -293,7 +294,7 @@ check_path() {
 
 # Main installation
 main() {
-    echo "🚀 Installing Ralph for Claude Code globally..."
+    echo "🚀 Installing Ralph for Copilot CLI globally..."
     echo ""
     
     check_dependencies
@@ -304,7 +305,7 @@ main() {
     check_path
     
     echo ""
-    log "SUCCESS" "🎉 Ralph for Claude Code installed successfully!"
+    log "SUCCESS" "🎉 Ralph for Copilot CLI installed successfully!"
     echo ""
     echo "Global commands available:"
     echo "  ralph --monitor          # Start Ralph with integrated monitoring"
@@ -319,8 +320,8 @@ main() {
     echo "Quick start:"
     echo "  1. ralph-setup my-awesome-project"
     echo "  2. cd my-awesome-project"
-    echo "  3. # Edit .ralph/PROMPT.md with your requirements"
-    echo "  4. ralph --monitor"
+    echo "  3. # Edit PROMPT.md with your requirements (see PROMPT.md.example)"
+    echo "  4. ralph -v"
     echo ""
     
     if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
@@ -334,13 +335,13 @@ case "${1:-install}" in
         main
         ;;
     uninstall)
-        log "INFO" "Uninstalling Ralph for Claude Code..."
+        log "INFO" "Uninstalling Ralph for Copilot CLI..."
         rm -f "$INSTALL_DIR/ralph" "$INSTALL_DIR/ralph-monitor" "$INSTALL_DIR/ralph-setup" "$INSTALL_DIR/ralph-import" "$INSTALL_DIR/ralph-migrate" "$INSTALL_DIR/ralph-enable" "$INSTALL_DIR/ralph-enable-ci" "$INSTALL_DIR/ralph-stats"
         rm -rf "$RALPH_HOME"
-        log "SUCCESS" "Ralph for Claude Code uninstalled"
+        log "SUCCESS" "Ralph for Copilot CLI uninstalled"
         ;;
     --help|-h)
-        echo "Ralph for Claude Code Installation"
+        echo "Ralph for Copilot CLI Installation"
         echo ""
         echo "Usage: $0 [install|uninstall]"
         echo ""
