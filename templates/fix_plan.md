@@ -1,16 +1,16 @@
-# Fix Plan — [Nome do Projeto]
+# Fix Plan — [Project Name]
 
-## [agente1] Fase 1: [Título da Fase 1]
-- [ ] [Tarefa 1 da fase 1]
-- [ ] [Tarefa 2 da fase 1]
-- [ ] [Tarefa 3 da fase 1]
+## [agent-name-1] Phase 1: [Phase 1 Title]
+- [ ] [Task 1 for phase 1]
+- [ ] [Task 2 for phase 1]
+- [ ] [Task 3 for phase 1]
 
-## [agente2] Fase 2: [Título da Fase 2]
-- [ ] [Tarefa 1 da fase 2]
-- [ ] [Tarefa 2 da fase 2]
+## [agent-name-2] Phase 2: [Phase 2 Title]
+- [ ] [Task 1 for phase 2]
+- [ ] [Task 2 for phase 2]
 
-## Notas
-- Substitua `[agente1]`, `[agente2]` pelos nomes dos agentes em `~/.copilot/agents/`
-- Exemplos de agentes: `pesquisador`, `desenvolvedor`, `publicacao_confluence`, `security-engineer`
-- Para projeto de agente único: remova os `## [agente]` headers e use apenas `## Título`
-- O Ralph detecta o agente ativo pela primeira seção com tarefas `[ ]` incompletas
+## Notes
+- Replace `[agent-name-1]`, `[agent-name-2]` with agent names from `~/.copilot/agents/`
+- For a single-agent project: remove the `## [agent]` headers and use plain `## Title` sections
+- Ralph detects the active agent by finding the first section with incomplete `[ ]` tasks
+- Agent transitions happen automatically when a section is fully checked `[x]`

@@ -1,74 +1,69 @@
-# Instruções Ralph — [Nome do Projeto]
+# Ralph Instructions — [Project Name]
 
-## Contexto do Projeto
-[Descreva o objetivo do projeto em 2-3 frases]
+## Project Context
+[Describe the goal of this project in 2-3 sentences]
 
-## Tecnologia / Escopo
-[Ex: AWS Secrets Manager, API Gateway, etc.]
+## Technology / Scope
+[e.g., AWS S3, REST API, CLI tool, etc.]
 
-## Ferramentas disponíveis
-- `view` — ler arquivos existentes
-- `create` — criar novos arquivos
-- `edit` — editar arquivos existentes
-- `bash` — executar comandos de terminal
+## Available Tools
+- `view` — read existing files
+- `create` — create new files
+- `edit` — modify existing files
+- `bash` — run terminal commands
+- `glob` — find files by pattern
+- `grep` — search file contents
 
-## Comportamento por agente
-> Ralph detecta qual agente está ativo pelo `@fix_plan.md`. Execute apenas as tarefas da sua seção.
+## Agent Behavior
+> Ralph auto-detects the active agent from `@fix_plan.md`. Only execute tasks in your section.
 
-### Se você é o `pesquisador`:
-1. Leia `@fix_plan.md` — identifique as tarefas da seção `## [pesquisador]`
-2. Pesquise [TECNOLOGIA] com foco em:
-   - CIS Benchmarks, NIST CSF 2.0, AWS Well-Architected Security Pillar
-   - OWASP, CVEs recentes, guia de hardening oficial
-3. Salve a pesquisa em `docs/pesquisas/[tecnologia].md` com as seções:
-   - Visão Geral, IAM, Criptografia, Rede, Monitoramento, CVEs, Referências
-4. Marque as tarefas concluídas no `@fix_plan.md` com `[x]`
+### If you are the `[agent-name-1]` agent:
+1. Read `@fix_plan.md` — find your section `## [agent-name-1]`
+2. [Describe what this agent should do — e.g., research, analyze, gather data]
+3. Save results to `[output path]`
+4. Mark completed tasks in `@fix_plan.md` with `[x]`
 
-### Se você é o `desenvolvedor`:
-1. Leia `@fix_plan.md` — identifique as tarefas da seção `## [desenvolvedor]`
-2. Leia a pesquisa disponível em `docs/pesquisas/[tecnologia].md`
-3. Leia o template em `templates/modelo_abb.html`
-4. Gere `output/[tecnologia]_abb.html` substituindo todos os placeholders `{{...}}`
-5. Confirme que não há placeholders restantes
-6. Marque as tarefas concluídas no `@fix_plan.md` com `[x]`
+### If you are the `[agent-name-2]` agent:
+1. Read `@fix_plan.md` — find your section `## [agent-name-2]`
+2. [Describe what this agent should do — e.g., generate documents, write code]
+3. Save output to `[output path]`
+4. Mark completed tasks in `@fix_plan.md` with `[x]`
 
-### Se você é o `publicacao_confluence`:
-1. Leia `@fix_plan.md` — identifique as tarefas da seção `## [publicacao_confluence]`
-2. Leia o documento gerado em `output/`
-3. Use o modelo adequado (ABB, SBB, Blueprint, etc.) definido no seu sistema
-4. Publique no Confluence usando o script disponível
-5. Registre a URL em `output/paginas_publicadas.txt`
-6. Marque as tarefas concluídas no `@fix_plan.md` com `[x]`
+### If you are the `[agent-name-3]` agent:
+1. Read `@fix_plan.md` — find your section `## [agent-name-3]`
+2. [Describe what this agent should do — e.g., review, publish, deploy]
+3. [Describe expected final output]
+4. Mark completed tasks in `@fix_plan.md` with `[x]`
 
 ---
 
-## 🎯 Status Reporting (OBRIGATÓRIO ao final de cada resposta)
+## 🎯 Status Reporting (REQUIRED at the end of every response)
 
 ```
 ---RALPH_STATUS---
 STATUS: IN_PROGRESS | COMPLETE | BLOCKED
-TASKS_COMPLETED_THIS_LOOP: <número de tarefas concluídas neste loop>
-FILES_MODIFIED: <número de arquivos criados/modificados>
+TASKS_COMPLETED_THIS_LOOP: <number of tasks completed this loop>
+FILES_MODIFIED: <number of files created/modified>
 TESTS_STATUS: NOT_RUN | PASSING | FAILING
 WORK_TYPE: RESEARCH | GENERATION | PUBLICATION | DOCUMENTATION
 EXIT_SIGNAL: false | true
-COMPONENTS_PROCESSED: <concluídas>/<total>
-RECOMMENDATION: <próxima ação em uma linha>
+COMPONENTS_PROCESSED: <done>/<total>
+RECOMMENDATION: <next action in one line>
 ---END_RALPH_STATUS---
 ```
 
-### Quando definir EXIT_SIGNAL: true
-Defina como **true** SOMENTE quando:
-1. ✅ TODAS as tarefas `[ ]` da SUA seção no `@fix_plan.md` estão marcadas `[x]`
-2. ✅ Os arquivos de output foram criados e validados
-3. ✅ Não há mais trabalho pendente na sua seção
+### When to set EXIT_SIGNAL: true
+Set to **true** ONLY when:
+1. ✅ ALL `[ ]` tasks in YOUR section of `@fix_plan.md` are marked `[x]`
+2. ✅ All expected output files were created and validated
+3. ✅ There is no remaining work in your section
 
-### Quando definir EXIT_SIGNAL: false
-- Enquanto ainda há tarefas `[ ]` na sua seção
-- Se encontrou um bloqueio (use `STATUS: BLOCKED` + descreva no RECOMMENDATION)
-- Se ainda está gerando/processando conteúdo
+### When to set EXIT_SIGNAL: false
+- While there are still `[ ]` tasks in your section
+- If you hit a blocker (use `STATUS: BLOCKED` and explain in RECOMMENDATION)
+- If you are still generating or processing content
 
-### Exemplo de status em progresso:
+### Example — task in progress:
 ```
 ---RALPH_STATUS---
 STATUS: IN_PROGRESS
@@ -77,21 +72,21 @@ FILES_MODIFIED: 1
 TESTS_STATUS: NOT_RUN
 WORK_TYPE: RESEARCH
 EXIT_SIGNAL: false
-COMPONENTS_PROCESSED: 1/2
-RECOMMENDATION: Continuar com próxima tarefa da seção [pesquisador]
+COMPONENTS_PROCESSED: 1/3
+RECOMMENDATION: Continue with next task in [agent-name-1] section
 ---END_RALPH_STATUS---
 ```
 
-### Exemplo de seção concluída:
+### Example — section complete:
 ```
 ---RALPH_STATUS---
 STATUS: COMPLETE
-TASKS_COMPLETED_THIS_LOOP: 2
-FILES_MODIFIED: 1
+TASKS_COMPLETED_THIS_LOOP: 3
+FILES_MODIFIED: 2
 TESTS_STATUS: NOT_RUN
 WORK_TYPE: RESEARCH
 EXIT_SIGNAL: true
-COMPONENTS_PROCESSED: 2/2
-RECOMMENDATION: Pesquisa concluída — pronto para próxima fase
+COMPONENTS_PROCESSED: 3/3
+RECOMMENDATION: All tasks done — ready for next phase
 ---END_RALPH_STATUS---
 ```
