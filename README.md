@@ -211,22 +211,6 @@ Single-agent examples from the original frankbria project.
 | Agents | Claude Code subagents | `~/.copilot/agents/` + `--agent` flag |
 | Multi-agent orchestration | not native | via `## [agent]` in `@fix_plan.md` |
 
-### Bugs Fixed
-
-**Bug #1 — False positive `has_completion_signal`** (`lib/response_analyzer.sh`)  
-Keyword detection ran even when `EXIT_SIGNAL: false` was explicit in RALPH_STATUS, causing premature loop exit.  
-*Fix: keyword detection only runs when no explicit EXIT_SIGNAL is present.*
-
-**Bug #2 — HTTP 400 session conflict** (`ralph_loop.sh`)  
-Loop 2 tried to resume the parent Copilot CLI session, which had pending `tool_use` blocks → HTTP 400 error.  
-*Fix: `COPILOT_USE_CONTINUE=false` — each loop starts a fresh session.*
-
-**Bug #3 — Invalid tool names** (`ralph_loop.sh`)  
-`--available-tools` used Claude Code names (`write`, `read`, `shell`) which don't exist in Copilot CLI.  
-*Fix: `COPILOT_ALLOWED_TOOLS="create,view,edit,bash,glob,grep"`*
-
----
-
 ## Project Structure
 
 ```
