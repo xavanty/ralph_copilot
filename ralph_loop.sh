@@ -34,19 +34,7 @@ COPILOT_USE_CONTINUE=false               # Disable session continuity (avoids pa
 COPILOT_SESSION_FILE=".copilot_session_id" # Session ID persistence file
 COPILOT_MIN_VERSION="1.0.0"             # Minimum required Copilot CLI version
 COPILOT_AGENT=""                         # Optional: custom agent from ~/.copilot/agents/ (e.g., "desenvolvedor")
-
-# Multi-agent phase engine configuration
-# Set RALPH_PHASES_ENABLED=true and define phases in .ralph.env to enable
-# Each phase has its own agent and prompt file; advances when EXIT_SIGNAL=true
-# Example .ralph.env:
-#   RALPH_PHASES_ENABLED=true
-#   RALPH_TOTAL_PHASES=3
-#   PHASE_1_NAME="Pesquisa"  PHASE_1_AGENT="pesquisador"  PHASE_1_PROMPT="prompts/01_pesquisa.md"
-#   PHASE_2_NAME="Geração"   PHASE_2_AGENT="desenvolvedor" PHASE_2_PROMPT="prompts/02_geracao.md"
-#   PHASE_3_NAME="Publicação" PHASE_3_AGENT="publicacao_confluence" PHASE_3_PROMPT="prompts/03_publicacao.md"
-RALPH_PHASES_ENABLED=false
-RALPH_TOTAL_PHASES=0
-RALPH_PHASE_STATE_FILE=".ralph_current_phase"
+                                         # When @fix_plan.md uses ## [agent] sections, this is set automatically
 
 # Load project-level overrides from .ralph.env if present
 if [[ -f ".ralph.env" ]]; then
@@ -788,99 +776,83 @@ update_session_last_used() {
 declare -a CLAUDE_CMD_ARGS=()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PHASE ENGINE — Multi-agent orchestration per project phase
-# Each phase runs a specific agent with a dedicated prompt until EXIT_SIGNAL=true
-# then Ralph automatically advances to the next phase.
+# FIX_PLAN AGENT DETECTION — Multi-agent orchestration via @fix_plan.md
+#
+# Agents are declared directly in @fix_plan.md using the syntax:
+#   ## [agent-name] Section Title
+#
+# Ralph reads @fix_plan.md at each loop, finds the first section that still
+# has incomplete tasks (- [ ]), and uses that section's agent automatically.
+# When all tasks in a section are done, Ralph advances to the next section/agent.
+#
+# Example @fix_plan.md:
+#   ## [pesquisador] Fase 1: Pesquisa de Segurança
+#   - [x] Pesquisar controles AWS Glue
+#   - [x] Salvar em docs/pesquisas/aws_glue.md
+#
+#   ## [publicacao_confluence] Fase 2: Geração e Publicação do SBB
+#   - [ ] Gerar SBB usando pesquisa e modelo do agente
+#   - [ ] Publicar no Confluence
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Returns the current phase number (1-based), initializing to 1 if not set
-get_current_phase() {
-    if [[ -f "$RALPH_PHASE_STATE_FILE" ]]; then
-        cat "$RALPH_PHASE_STATE_FILE"
-    else
-        echo "1"
-    fi
-}
+FIX_PLAN_FILE="@fix_plan.md"               # Fix plan file to read agents from
+RALPH_LAST_AGENT_FILE=".ralph_last_agent"  # Tracks last active agent for transition detection
 
-# Reads PHASE_N_AGENT and PHASE_N_PROMPT for the given phase number
-# Sets global COPILOT_AGENT and PROMPT_FILE to phase-specific values
-load_phase_config() {
-    local phase=$1
-    local agent_var="PHASE_${phase}_AGENT"
-    local prompt_var="PHASE_${phase}_PROMPT"
-    local name_var="PHASE_${phase}_NAME"
+# Reads @fix_plan.md and returns the agent name for the first section
+# that has at least one incomplete task (- [ ]).
+# Format: ## [agent-name] Optional Title
+# Returns empty string if no agent-tagged section is found.
+detect_agent_from_fix_plan() {
+    local fix_plan="$FIX_PLAN_FILE"
+    [[ ! -f "$fix_plan" ]] && return 0
 
-    local phase_agent="${!agent_var:-}"
-    local phase_prompt="${!prompt_var:-}"
-    local phase_name="${!name_var:-Phase $phase}"
+    local current_agent=""
 
-    if [[ -z "$phase_agent" || -z "$phase_prompt" ]]; then
-        log_status "ERROR" "Phase $phase config missing: need PHASE_${phase}_AGENT and PHASE_${phase}_PROMPT in .ralph.env"
-        return 1
-    fi
-
-    COPILOT_AGENT="$phase_agent"
-    PROMPT_FILE="$phase_prompt"
-    log_status "INFO" "📋 Phase $phase/$RALPH_TOTAL_PHASES: [$phase_name] — agent: $phase_agent | prompt: $phase_prompt"
-}
-
-# Advances to next phase: resets exit signals, updates state file
-advance_phase() {
-    local current_phase
-    current_phase=$(get_current_phase)
-    local next_phase=$((current_phase + 1))
-
-    log_status "SUCCESS" "✅ Phase $current_phase complete — advancing to phase $next_phase/$RALPH_TOTAL_PHASES"
-
-    # Reset exit signals so next phase starts fresh
-    echo '{"test_only_loops": [], "done_signals": [], "completion_indicators": []}' > "$EXIT_SIGNALS_FILE"
-
-    # Reset circuit breaker state for new phase
-    echo '{"state": "CLOSED", "consecutive_no_progress": 0, "total_loops": 0, "last_state_change": "", "half_open_attempts": 0}' > ".circuit_breaker_state"
-
-    # Clear session so next phase starts a new copilot session
-    rm -f "$COPILOT_SESSION_FILE"
-
-    # Save next phase number
-    echo "$next_phase" > "$RALPH_PHASE_STATE_FILE"
-}
-
-# Returns true if the current phase is the last one
-is_last_phase() {
-    local current_phase
-    current_phase=$(get_current_phase)
-    [[ "$current_phase" -ge "$RALPH_TOTAL_PHASES" ]]
-}
-
-# Initialize phase engine: validate config, show summary, set initial state
-init_phase_engine() {
-    if [[ "$RALPH_PHASES_ENABLED" != "true" || "$RALPH_TOTAL_PHASES" -lt 1 ]]; then
-        return 0  # Phase engine disabled — single agent mode
-    fi
-
-    log_status "INFO" "🔄 Phase engine enabled — $RALPH_TOTAL_PHASES phases configured"
-
-    # Validate all phases have required config
-    local i
-    for (( i=1; i<=RALPH_TOTAL_PHASES; i++ )); do
-        local agent_var="PHASE_${i}_AGENT"
-        local prompt_var="PHASE_${i}_PROMPT"
-        local name_var="PHASE_${i}_NAME"
-        if [[ -z "${!agent_var:-}" || -z "${!prompt_var:-}" ]]; then
-            log_status "ERROR" "Phase $i is missing PHASE_${i}_AGENT or PHASE_${i}_PROMPT in .ralph.env"
-            exit 1
+    while IFS= read -r line; do
+        # Match section header: ## [agent-name] or ## [agent-name] Any Title
+        if [[ "$line" =~ ^##[[:space:]]*\[([a-zA-Z0-9_-]+)\] ]]; then
+            current_agent="${BASH_REMATCH[1]}"
         fi
-        log_status "INFO" "  Phase $i: [${!name_var:-Phase $i}] agent=${!agent_var} prompt=${!prompt_var}"
-    done
 
-    # Initialize state file if not present
-    if [[ ! -f "$RALPH_PHASE_STATE_FILE" ]]; then
-        echo "1" > "$RALPH_PHASE_STATE_FILE"
+        # First incomplete task found → this section's agent is active
+        if [[ -n "$current_agent" && "$line" =~ ^[[:space:]]*-[[:space:]]\[[[:space:]]\] ]]; then
+            echo "$current_agent"
+            return 0
+        fi
+    done < "$fix_plan"
+
+    echo ""  # No incomplete agent section found
+}
+
+# Applies agent detected from fix_plan to COPILOT_AGENT.
+# Detects transitions (agent changed) and resets exit signals + circuit breaker.
+# Returns 1 if a transition occurred (caller can log/act accordingly).
+apply_fix_plan_agent() {
+    local detected_agent
+    detected_agent=$(detect_agent_from_fix_plan)
+
+    [[ -z "$detected_agent" ]] && return 0  # No agent in fix_plan → keep current config
+
+    local last_agent=""
+    [[ -f "$RALPH_LAST_AGENT_FILE" ]] && last_agent=$(cat "$RALPH_LAST_AGENT_FILE")
+
+    if [[ "$detected_agent" != "$last_agent" ]]; then
+        if [[ -n "$last_agent" ]]; then
+            log_status "SUCCESS" "✅ Agent transition: [$last_agent] → [$detected_agent]"
+            # Reset exit signals and circuit breaker for the new agent/phase
+            echo '{"test_only_loops": [], "done_signals": [], "completion_indicators": []}' > "$EXIT_SIGNALS_FILE"
+            echo '{"state": "CLOSED", "consecutive_no_progress": 0, "total_loops": 0, "last_state_change": "", "half_open_attempts": 0}' > ".circuit_breaker_state"
+            rm -f "$COPILOT_SESSION_FILE"
+        else
+            log_status "INFO" "🤖 Active agent from fix_plan: [$detected_agent]"
+        fi
+        echo "$detected_agent" > "$RALPH_LAST_AGENT_FILE"
+        COPILOT_AGENT="$detected_agent"
+        return 1  # Transition occurred
     fi
 
-    local current_phase
-    current_phase=$(get_current_phase)
-    log_status "INFO" "▶️  Resuming from phase $current_phase"
+    COPILOT_AGENT="$detected_agent"
+    return 0
 }
 
 # Build Copilot CLI command using array (shell-injection safe)
@@ -1155,44 +1127,26 @@ main() {
     log_status "INFO" "Logs: $LOG_DIR/ | Docs: $DOCS_DIR/ | Status: $STATUS_FILE"
     
     # Check if this is a Ralph project directory
-    # In phase mode, validate the first phase prompt; otherwise validate PROMPT_FILE
-    local check_prompt="$PROMPT_FILE"
-    if [[ "$RALPH_PHASES_ENABLED" == "true" && "$RALPH_TOTAL_PHASES" -ge 1 ]]; then
-        check_prompt="${PHASE_1_PROMPT:-$PROMPT_FILE}"
-    fi
-
-    if [[ ! -f "$check_prompt" ]]; then
-        log_status "ERROR" "Prompt file '$check_prompt' not found!"
+    if [[ ! -f "$PROMPT_FILE" ]]; then
+        log_status "ERROR" "Prompt file '$PROMPT_FILE' not found!"
         echo ""
-        
-        # Check if this looks like a partial Ralph project
         if [[ -f "@fix_plan.md" ]] || [[ -d "specs" ]] || [[ -f "@AGENT.md" ]]; then
-            echo "This appears to be a Ralph project but is missing the prompt file."
-            echo "You may need to create or restore the prompt file."
+            echo "This appears to be a Ralph project but is missing PROMPT.md."
         else
             echo "This directory is not a Ralph project."
         fi
-        
         echo ""
         echo "To fix this:"
         echo "  1. Create a new project: ralph-setup my-project"
-        echo "  2. Import existing requirements: ralph-import requirements.md"
-        echo "  3. Navigate to an existing Ralph project directory"
-        echo "  4. Or create PROMPT.md manually in this directory"
+        echo "  2. Navigate to an existing Ralph project directory"
+        echo "  3. Or create PROMPT.md manually in this directory"
         echo ""
-        echo "Ralph projects should contain: PROMPT.md (or phase prompts), @fix_plan.md, specs/, src/, etc."
+        echo "Ralph projects should contain: PROMPT.md, @fix_plan.md, specs/, src/, etc."
         exit 1
     fi
 
-    # Initialize phase engine (no-op if disabled)
-    init_phase_engine
-
-    # Load first phase config if phase engine is active
-    if [[ "$RALPH_PHASES_ENABLED" == "true" && "$RALPH_TOTAL_PHASES" -ge 1 ]]; then
-        local current_phase
-        current_phase=$(get_current_phase)
-        load_phase_config "$current_phase"
-    fi
+    # Detect initial agent from @fix_plan.md (if sections use ## [agent] syntax)
+    apply_fix_plan_agent || true  # Sets COPILOT_AGENT from fix_plan if defined
 
     # Initialize session tracking before entering the loop
     init_session_tracking
@@ -1212,12 +1166,10 @@ main() {
         
         log_status "LOOP" "=== Starting Loop #$loop_count ==="
 
-        # In phase mode: show current phase in loop header
-        if [[ "$RALPH_PHASES_ENABLED" == "true" && "$RALPH_TOTAL_PHASES" -ge 1 ]]; then
-            local current_phase
-            current_phase=$(get_current_phase)
-            local phase_name_var="PHASE_${current_phase}_NAME"
-            log_status "INFO" "📋 Current phase: $current_phase/$RALPH_TOTAL_PHASES — ${!phase_name_var:-Phase $current_phase}"
+        # Apply agent from @fix_plan.md (detects transitions automatically)
+        apply_fix_plan_agent || true
+        if [[ -n "$COPILOT_AGENT" ]]; then
+            log_status "INFO" "🤖 Agent: [$COPILOT_AGENT]"
         fi
         
         # Check circuit breaker before attempting execution
@@ -1234,31 +1186,21 @@ main() {
             continue
         fi
 
-        # Check for graceful exit conditions (phase complete or project complete)
+        # Check for graceful exit conditions
         local exit_reason
         exit_reason=$(should_exit_gracefully)
         if [[ "$exit_reason" != "" ]]; then
-            # Phase engine: check if there are more phases to run
-            if [[ "$RALPH_PHASES_ENABLED" == "true" && "$RALPH_TOTAL_PHASES" -ge 1 ]] && ! is_last_phase; then
-                local current_phase
-                current_phase=$(get_current_phase)
-                log_status "SUCCESS" "🏁 Phase $current_phase complete ($exit_reason) — transitioning..."
-                advance_phase
-
-                # Load config for the newly advanced phase
-                local next_phase
-                next_phase=$(get_current_phase)
-                if ! load_phase_config "$next_phase"; then
-                    log_status "ERROR" "Failed to load config for phase $next_phase — stopping"
-                    break
-                fi
-
-                log_status "INFO" "▶️  Starting phase $next_phase (agent: $COPILOT_AGENT, prompt: $PROMPT_FILE)"
-                update_status "$loop_count" "$(cat "$CALL_COUNT_FILE")" "phase_transition" "running" "phase_${current_phase}_to_${next_phase}"
-                continue  # Continue the while loop with new phase config
+            # Check if there are more agent sections with pending tasks in fix_plan
+            local next_agent
+            next_agent=$(detect_agent_from_fix_plan)
+            if [[ -n "$next_agent" && "$next_agent" != "$COPILOT_AGENT" ]]; then
+                log_status "INFO" "📋 Fix plan has more sections — transitioning to [$next_agent]"
+                apply_fix_plan_agent || true
+                update_status "$loop_count" "$(cat "$CALL_COUNT_FILE")" "agent_transition" "running" "${COPILOT_AGENT}_started"
+                continue
             fi
 
-            # All phases done (or phase engine disabled) — exit
+            # All done — exit
             log_status "SUCCESS" "🏁 Graceful exit triggered: $exit_reason"
             reset_session "project_complete"
             update_status "$loop_count" "$(cat "$CALL_COUNT_FILE")" "graceful_exit" "completed" "$exit_reason"
@@ -1267,11 +1209,9 @@ main() {
             log_status "INFO" "  - Total loops: $loop_count"
             log_status "INFO" "  - API calls used: $(cat "$CALL_COUNT_FILE")"
             log_status "INFO" "  - Exit reason: $exit_reason"
-            if [[ "$RALPH_PHASES_ENABLED" == "true" ]]; then
-                log_status "INFO" "  - Phases completed: $RALPH_TOTAL_PHASES/$RALPH_TOTAL_PHASES"
-                # Clean up phase state file on successful completion
-                rm -f "$RALPH_PHASE_STATE_FILE"
-            fi
+
+            # Clean up agent tracking file on successful completion
+            rm -f "$RALPH_LAST_AGENT_FILE"
 
             break
         fi
