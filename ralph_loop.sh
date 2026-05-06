@@ -33,6 +33,13 @@ COPILOT_ALLOWED_TOOLS="create,view,edit,bash,glob,grep"  # Copilot CLI tool name
 COPILOT_USE_CONTINUE=false               # Disable session continuity (avoids parent-session conflict)
 COPILOT_SESSION_FILE=".copilot_session_id" # Session ID persistence file
 COPILOT_MIN_VERSION="1.0.0"             # Minimum required Copilot CLI version
+COPILOT_AGENT=""                         # Optional: custom agent from ~/.copilot/agents/ (e.g., "desenvolvedor")
+
+# Load project-level overrides from .ralph.env if present
+if [[ -f ".ralph.env" ]]; then
+    # shellcheck disable=SC1091
+    source ".ralph.env"
+fi
 
 # Session management configuration
 # Note: SESSION_EXPIRATION_SECONDS is defined in lib/response_analyzer.sh (86400 = 24 hours)
@@ -794,6 +801,11 @@ build_copilot_command() {
     # Add available tools as a single comma-separated argument
     if [[ -n "$COPILOT_ALLOWED_TOOLS" ]]; then
         COPILOT_CMD_ARGS+=("--available-tools" "$COPILOT_ALLOWED_TOOLS")
+    fi
+
+    # Add custom agent if configured (from ~/.copilot/agents/<agent>.md)
+    if [[ -n "$COPILOT_AGENT" ]]; then
+        COPILOT_CMD_ARGS+=("--agent" "$COPILOT_AGENT")
     fi
 
     # Allow all tools to run automatically (required for non-interactive mode)
