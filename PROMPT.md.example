@@ -1,59 +1,97 @@
-# Ralph — Fluxo de Teste Completo (Copilot-CLI)
+# Instruções Ralph — [Nome do Projeto]
 
-## Contexto
-Você é Ralph, um agente autônomo rodando com Copilot CLI. 
-Este projeto é um **teste do fluxo completo** de criação de tarefas.
+## Contexto do Projeto
+[Descreva o objetivo do projeto em 2-3 frases]
 
-## Objetivo
-Criar e preencher o arquivo `output/task_report.md` com um relatório de 3 tarefas de exemplo.
+## Tecnologia / Escopo
+[Ex: AWS Secrets Manager, API Gateway, etc.]
 
-## Tarefas a Executar
+## Ferramentas disponíveis
+- `view` — ler arquivos existentes
+- `create` — criar novos arquivos
+- `edit` — editar arquivos existentes
+- `bash` — executar comandos de terminal
 
-### Tarefa 1 — Criar o arquivo de relatório
-Crie o arquivo `output/task_report.md` com o seguinte conteúdo:
+## Comportamento por agente
+> Ralph detecta qual agente está ativo pelo `@fix_plan.md`. Execute apenas as tarefas da sua seção.
 
-```markdown
-# Relatório de Tarefas — Teste Ralph + Copilot CLI
+### Se você é o `pesquisador`:
+1. Leia `@fix_plan.md` — identifique as tarefas da seção `## [pesquisador]`
+2. Pesquise [TECNOLOGIA] com foco em:
+   - CIS Benchmarks, NIST CSF 2.0, AWS Well-Architected Security Pillar
+   - OWASP, CVEs recentes, guia de hardening oficial
+3. Salve a pesquisa em `docs/pesquisas/[tecnologia].md` com as seções:
+   - Visão Geral, IAM, Criptografia, Rede, Monitoramento, CVEs, Referências
+4. Marque as tarefas concluídas no `@fix_plan.md` com `[x]`
 
-**Gerado em:** <data atual>
-**Status geral:** COMPLETO
+### Se você é o `desenvolvedor`:
+1. Leia `@fix_plan.md` — identifique as tarefas da seção `## [desenvolvedor]`
+2. Leia a pesquisa disponível em `docs/pesquisas/[tecnologia].md`
+3. Leia o template em `templates/modelo_abb.html`
+4. Gere `output/[tecnologia]_abb.html` substituindo todos os placeholders `{{...}}`
+5. Confirme que não há placeholders restantes
+6. Marque as tarefas concluídas no `@fix_plan.md` com `[x]`
 
-## Tarefas
+### Se você é o `publicacao_confluence`:
+1. Leia `@fix_plan.md` — identifique as tarefas da seção `## [publicacao_confluence]`
+2. Leia o documento gerado em `output/`
+3. Use o modelo adequado (ABB, SBB, Blueprint, etc.) definido no seu sistema
+4. Publique no Confluence usando o script disponível
+5. Registre a URL em `output/paginas_publicadas.txt`
+6. Marque as tarefas concluídas no `@fix_plan.md` com `[x]`
 
-| ID | Título | Status | Descrição |
-|----|--------|--------|-----------|
-| T001 | Configuração do ambiente | ✅ Concluído | Setup inicial do ralph com copilot-cli |
-| T002 | Validação do fluxo de loop | ✅ Concluído | Teste do ciclo completo: prompt → execução → análise → saída |
-| T003 | Geração de relatório | ✅ Concluído | Criação deste relatório como prova de funcionamento |
+---
 
-## Resultado
-Fluxo completo funcionando: o Ralph executou corretamente usando Copilot CLI.
-```
-
-### Tarefa 2 — Verificar o arquivo criado
-Leia o arquivo `output/task_report.md` e confirme que foi criado corretamente.
-
-### Tarefa 3 — Reportar status
-Ao final, emita o bloco de status abaixo.
-
-## ⚠️ REGRAS IMPORTANTES
-- Use as ferramentas `create` (criar arquivo), `view` (ler arquivo) e `edit` (editar).
-- Crie a pasta `output/` usando a ferramenta `bash` se necessário, ou use `create` diretamente com o caminho `output/task_report.md`.
-- Após criar o arquivo, **SEMPRE** emita o bloco `---RALPH_STATUS---` abaixo.
-
-## 🎯 Status Reporting (OBRIGATÓRIO — emita ao final de cada resposta)
+## 🎯 Status Reporting (OBRIGATÓRIO ao final de cada resposta)
 
 ```
 ---RALPH_STATUS---
-STATUS: IN_PROGRESS | COMPLETE
+STATUS: IN_PROGRESS | COMPLETE | BLOCKED
 TASKS_COMPLETED_THIS_LOOP: <número de tarefas concluídas neste loop>
 FILES_MODIFIED: <número de arquivos criados/modificados>
-TESTS_STATUS: NOT_RUN
-WORK_TYPE: GENERATION
+TESTS_STATUS: NOT_RUN | PASSING | FAILING
+WORK_TYPE: RESEARCH | GENERATION | PUBLICATION | DOCUMENTATION
 EXIT_SIGNAL: false | true
 COMPONENTS_PROCESSED: <concluídas>/<total>
-RECOMMENDATION: <próxima ação ou "Projeto concluído">
+RECOMMENDATION: <próxima ação em uma linha>
 ---END_RALPH_STATUS---
 ```
 
-**Quando todas as 3 tarefas estiverem concluídas, use EXIT_SIGNAL: true e STATUS: COMPLETE.**
+### Quando definir EXIT_SIGNAL: true
+Defina como **true** SOMENTE quando:
+1. ✅ TODAS as tarefas `[ ]` da SUA seção no `@fix_plan.md` estão marcadas `[x]`
+2. ✅ Os arquivos de output foram criados e validados
+3. ✅ Não há mais trabalho pendente na sua seção
+
+### Quando definir EXIT_SIGNAL: false
+- Enquanto ainda há tarefas `[ ]` na sua seção
+- Se encontrou um bloqueio (use `STATUS: BLOCKED` + descreva no RECOMMENDATION)
+- Se ainda está gerando/processando conteúdo
+
+### Exemplo de status em progresso:
+```
+---RALPH_STATUS---
+STATUS: IN_PROGRESS
+TASKS_COMPLETED_THIS_LOOP: 1
+FILES_MODIFIED: 1
+TESTS_STATUS: NOT_RUN
+WORK_TYPE: RESEARCH
+EXIT_SIGNAL: false
+COMPONENTS_PROCESSED: 1/2
+RECOMMENDATION: Continuar com próxima tarefa da seção [pesquisador]
+---END_RALPH_STATUS---
+```
+
+### Exemplo de seção concluída:
+```
+---RALPH_STATUS---
+STATUS: COMPLETE
+TASKS_COMPLETED_THIS_LOOP: 2
+FILES_MODIFIED: 1
+TESTS_STATUS: NOT_RUN
+WORK_TYPE: RESEARCH
+EXIT_SIGNAL: true
+COMPONENTS_PROCESSED: 2/2
+RECOMMENDATION: Pesquisa concluída — pronto para próxima fase
+---END_RALPH_STATUS---
+```

@@ -1,27 +1,16 @@
-# Ralph Fix Plan
+# Fix Plan — [Nome do Projeto]
 
-## High Priority
-- [ ] Set up basic project structure and build system
-- [ ] Define core data structures and types
-- [ ] Implement basic input/output handling
-- [ ] Create test framework and initial tests
+## [agente1] Fase 1: [Título da Fase 1]
+- [ ] [Tarefa 1 da fase 1]
+- [ ] [Tarefa 2 da fase 1]
+- [ ] [Tarefa 3 da fase 1]
 
-## Medium Priority
-- [ ] Add error handling and validation
-- [ ] Implement core business logic
-- [ ] Add configuration management
-- [ ] Create user documentation
+## [agente2] Fase 2: [Título da Fase 2]
+- [ ] [Tarefa 1 da fase 2]
+- [ ] [Tarefa 2 da fase 2]
 
-## Low Priority
-- [ ] Performance optimization
-- [ ] Extended feature set
-- [ ] Integration with external services
-- [ ] Advanced error recovery
-
-## Completed
-- [x] Project initialization
-
-## Notes
-- Focus on MVP functionality first
-- Ensure each feature is properly tested
-- Update this file after each major milestone
+## Notas
+- Substitua `[agente1]`, `[agente2]` pelos nomes dos agentes em `~/.copilot/agents/`
+- Exemplos de agentes: `pesquisador`, `desenvolvedor`, `publicacao_confluence`, `security-engineer`
+- Para projeto de agente único: remova os `## [agente]` headers e use apenas `## Título`
+- O Ralph detecta o agente ativo pela primeira seção com tarefas `[ ]` incompletas
