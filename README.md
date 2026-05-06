@@ -1,21 +1,21 @@
 # Ralph for GitHub Copilot CLI
 
-> **Adaptação do projeto [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code) para GitHub Copilot CLI**  
-> Loop autônomo de IA com detecção inteligente de saída, orquestração multi-agente e suporte nativo aos agentes do Copilot CLI.
+> Adaptation of [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code) for GitHub Copilot CLI.  
+> An autonomous AI loop with intelligent exit detection, multi-agent orchestration, and native support for Copilot CLI agents.
 
 ---
 
-## O que é o Ralph?
+## What is Ralph?
 
-Ralph é um loop autônomo de desenvolvimento baseado em IA, implementado originalmente por [Frank Bria](https://github.com/frankbria) para o Claude Code. Esta adaptação traz o mesmo poder para o **GitHub Copilot CLI** (`copilot` command), com três melhorias fundamentais:
+Ralph is an autonomous AI development loop, originally created by [Frank Bria](https://github.com/frankbria) for Claude Code. This adaptation brings the same capability to **GitHub Copilot CLI** (`copilot` command), with three core improvements:
 
-1. **3 bugs críticos corrigidos** para funcionar com o Copilot CLI
-2. **Suporte a agentes** (`~/.copilot/agents/`) com troca automática por fase
-3. **Orquestração multi-agente via `@fix_plan.md`** — zero configuração extra
+1. **3 critical bugs fixed** to work correctly with Copilot CLI
+2. **Agent support** (`~/.copilot/agents/`) with automatic phase-based switching
+3. **Multi-agent orchestration via `@fix_plan.md`** — zero extra configuration
 
 ---
 
-## Instalação
+## Installation
 
 ```bash
 git clone https://github.com/xavanty/ralph_copilot.git
@@ -24,255 +24,239 @@ chmod +x install.sh
 ./install.sh
 ```
 
-**Pré-requisito:** GitHub Copilot CLI instalado e autenticado.
+**Prerequisite:** GitHub Copilot CLI installed and authenticated.
 ```bash
-copilot --version   # versão ≥ 1.0.0
+copilot --version   # version ≥ 1.0.0
 ```
 
-Isso instala os comandos globais: `ralph`, `ralph-setup`, `ralph-monitor`.
+This installs three global commands: `ralph`, `ralph-setup`, `ralph-monitor`.
 
 ---
 
-## Início Rápido
+## Quick Start
 
 ```bash
-# 1. Criar novo projeto
-ralph-setup meu-projeto
-cd meu-projeto
+# 1. Create a new project
+ralph-setup my-project
+cd my-project
 
-# 2. Editar PROMPT.md com o objetivo do projeto
-# 3. Editar @fix_plan.md com as tarefas (veja formato abaixo)
-# 4. Executar
+# 2. Edit PROMPT.md with your project goal
+# 3. Edit @fix_plan.md with your tasks (see format below)
+# 4. Run
 ralph -v
 ```
 
 ---
 
-## Os dois arquivos principais
+## The Two Core Files
 
-### `PROMPT.md` — Instruções para o agente
+### `PROMPT.md` — Agent Instructions
 
-O `PROMPT.md` é lido a cada loop e fornece:
-- **Contexto do projeto**: o que está sendo construído/gerado
-- **Instruções por agente**: o que cada agente deve fazer quando for ativado
-- **Ferramentas disponíveis**: `view`, `create`, `edit`, `bash`, `glob`, `grep`
-- **Bloco RALPH_STATUS**: formato obrigatório ao final de cada resposta
+`PROMPT.md` is read every loop and provides:
+- **Project context**: what is being built or generated
+- **Per-agent instructions**: what each agent should do when activated
+- **Available tools**: `view`, `create`, `edit`, `bash`, `glob`, `grep`
+- **RALPH_STATUS block**: required at the end of every response
 
 ```markdown
-# Instruções Ralph — [Nome do Projeto]
+# Ralph Instructions — [Project Name]
 
-## Contexto
-[Descreva o projeto e o objetivo]
+## Project Context
+[Describe the project and goal]
 
-## Se você é o `pesquisador`:
-[Instruções específicas para o agente pesquisador]
+## If you are the `[agent-name-1]` agent:
+[Specific instructions for this agent]
 
-## Se você é o `desenvolvedor`:
-[Instruções específicas para o agente desenvolvedor]
+## If you are the `[agent-name-2]` agent:
+[Specific instructions for this agent]
 
-## 🎯 Status Reporting (OBRIGATÓRIO ao final de cada resposta)
+## Status Reporting (REQUIRED at end of every response)
 
-\`\`\`
 ---RALPH_STATUS---
 STATUS: IN_PROGRESS | COMPLETE | BLOCKED
-TASKS_COMPLETED_THIS_LOOP: <número>
-FILES_MODIFIED: <número>
+TASKS_COMPLETED_THIS_LOOP: <number>
+FILES_MODIFIED: <number>
 TESTS_STATUS: NOT_RUN | PASSING | FAILING
-WORK_TYPE: RESEARCH | GENERATION | PUBLICATION | DOCUMENTATION
+WORK_TYPE: RESEARCH | GENERATION | DOCUMENTATION | PUBLICATION
 EXIT_SIGNAL: false | true
-COMPONENTS_PROCESSED: <concluídas>/<total>
-RECOMMENDATION: <próxima ação em uma linha>
+COMPONENTS_PROCESSED: <done>/<total>
+RECOMMENDATION: <next action in one line>
 ---END_RALPH_STATUS---
-\`\`\`
 
-**EXIT_SIGNAL: true** apenas quando TODAS as tarefas `[ ]` da sua seção no `@fix_plan.md` estiverem marcadas `[x]`.
+EXIT_SIGNAL: true only when ALL [ ] tasks in your section of @fix_plan.md are marked [x].
 ```
 
-### `@fix_plan.md` — Lista de tarefas com agente por seção
+See `PROMPT.md.example` for a full annotated template.
 
-O `@fix_plan.md` é o arquivo central do Ralph. Ele define:
-- **As tarefas** a serem executadas (`- [ ]` para pendentes, `- [x]` para concluídas)
-- **O agente responsável** por cada seção (sintaxe `## [agente] Título`)
+---
 
-**Ralph lê este arquivo a cada loop** e ativa automaticamente o agente certo.
+### `@fix_plan.md` — Task List with Per-Section Agents
+
+`@fix_plan.md` is the central control file. It defines:
+- **Tasks** to execute (`- [ ]` pending, `- [x]` done)
+- **The responsible agent** per section (syntax: `## [agent-name] Title`)
+
+Ralph reads this file every loop and automatically activates the correct agent.
 
 ```markdown
-# Fix Plan — [Nome do Projeto]
+# Fix Plan — [Project Name]
 
-## [pesquisador] Fase 1: Pesquisa
-- [ ] Pesquisar [tecnologia] (CIS, NIST, Well-Architected, OWASP)
-- [ ] Salvar resultado em docs/pesquisas/[tecnologia].md
+## [agent-name-1] Phase 1: Research
+- [ ] Gather information on [TOPIC]
+- [ ] Save findings to docs/research/[topic].md
 
-## [desenvolvedor] Fase 2: Geração do Documento
-- [ ] Ler pesquisa de docs/pesquisas/[tecnologia].md
-- [ ] Gerar output/[tecnologia]_doc.html
-- [ ] Verificar que não há placeholders restantes
+## [agent-name-2] Phase 2: Generation
+- [ ] Read research and generate output document
+- [ ] Verify output is complete
 
-## [publicacao_confluence] Fase 3: Publicação
-- [ ] Publicar documento no Confluence
-- [ ] Registrar URL em output/paginas_publicadas.txt
+## [agent-name-3] Phase 3: Review
+- [ ] Review the generated document
+- [ ] Record completion
 ```
 
-**Como funciona a detecção de agente:**
-1. Ralph lê `@fix_plan.md` linha a linha no início de cada loop
-2. Encontra a primeira seção `## [agente]` com pelo menos um `- [ ]` incompleto
-3. Ativa esse agente via `--agent <nome>` na chamada ao Copilot CLI
-4. Quando a seção completa (todos `[x]`), Ralph detecta a transição automaticamente:
-   - Reseta os sinais de saída
-   - Inicia nova sessão Copilot
-   - Carrega o próximo agente
+**How agent detection works:**
+1. Ralph reads `@fix_plan.md` line by line at the start of each loop
+2. Finds the first `## [agent-name]` section with at least one incomplete `- [ ]` task
+3. Activates that agent via `--agent <name>` when calling Copilot CLI
+4. When the section is fully done (all `[x]`), Ralph automatically:
+   - Resets exit signals
+   - Starts a new Copilot session
+   - Loads the next agent
 
 ---
 
-## Fluxo Multi-Agente
+## Multi-Agent Flow
 
 ```
-@fix_plan.md                    Ralph                    Copilot CLI
-─────────────────────────────────────────────────────────────────────
-## [pesquisador] Fase 1         ──→  --agent pesquisador  ──→  pesquisa
-  - [x] Task 1 ✓                                               & salva
-  - [x] Task 2 ✓                ←── EXIT_SIGNAL: true ←──
+@fix_plan.md                  Ralph                Copilot CLI
+───────────────────────────────────────────────────────────────
+## [agent-1] Phase 1          ──→  --agent agent-1  ──→  works
+  - [x] Task 1 ✓                                          on tasks
+  - [x] Task 2 ✓              ←── EXIT_SIGNAL: true ←──
 
-                                 reseta signals, nova sessão
-                                 detecta próxima seção incompleta
+                               resets signals, new session
+                               detects next incomplete section
 
-## [publicacao_confluence] F2   ──→  --agent publicacao_confluence
-  - [ ] Task 3                                                  gera SBB
-  - [ ] Task 4                  ←── EXIT_SIGNAL: true ←──  e publica
+## [agent-2] Phase 2          ──→  --agent agent-2  ──→  works
+  - [ ] Task 3                                            on tasks
+  - [ ] Task 4                ←── EXIT_SIGNAL: true ←──
 
-                                 projeto completo — exit 0
+                               project complete — exit 0
 ```
 
 ---
 
-## Agentes compatíveis (`~/.copilot/agents/`)
+## RALPH_STATUS Block — Required Format
 
-| Agente | Especialidade |
-|--------|--------------|
-| `pesquisador` | Pesquisa técnica: CIS, NIST, OWASP, CVEs, documentação oficial |
-| `desenvolvedor` | Python, Shell Script, geração de código e documentos HTML |
-| `publicacao_confluence` | Modelos ABB, SBB, Blueprint, Modelagem de Ameaça — publica no Confluence |
-| `security-engineer` | Arquitetura de segurança e modelagem de ameaças |
-| `devops-engineer` | CI/CD, Docker, infraestrutura como código |
-| `cloud-architect` | Arquitetura multi-cloud, AWS/Azure/GCP |
-| `terraform-engineer` | IaC com Terraform |
-
-Qualquer arquivo `.md` em `~/.copilot/agents/` pode ser usado como valor no `## [agente]`.
-
----
-
-## Bloco RALPH_STATUS — Formato obrigatório
-
-Todo `PROMPT.md` deve instruir o agente a terminar **cada resposta** com:
+Every `PROMPT.md` must instruct the agent to end **every response** with:
 
 ```
 ---RALPH_STATUS---
 STATUS: IN_PROGRESS | COMPLETE | BLOCKED
-TASKS_COMPLETED_THIS_LOOP: <número>
-FILES_MODIFIED: <número>
+TASKS_COMPLETED_THIS_LOOP: <number>
+FILES_MODIFIED: <number>
 TESTS_STATUS: PASSING | FAILING | NOT_RUN
 WORK_TYPE: RESEARCH | GENERATION | DOCUMENTATION | PUBLICATION
 EXIT_SIGNAL: false | true
-COMPONENTS_PROCESSED: <concluídas>/<total>
-RECOMMENDATION: <próxima ação em uma linha>
+COMPONENTS_PROCESSED: <done>/<total>
+RECOMMENDATION: <next action in one line>
 ---END_RALPH_STATUS---
 ```
 
-| Campo | Quando `true` / valor específico |
-|-------|----------------------------------|
-| `EXIT_SIGNAL: true` | TODAS as tarefas `[ ]` da seção atual no `@fix_plan.md` estão `[x]` |
-| `STATUS: BLOCKED` | Dependência externa ausente (ex: credenciais, arquivo faltando) |
-| `STATUS: COMPLETE` | Projeto inteiro concluído |
+| Field | When to use |
+|-------|-------------|
+| `EXIT_SIGNAL: true` | ALL `[ ]` tasks in the current section are now `[x]` |
+| `STATUS: BLOCKED` | Missing external dependency (credentials, file, API) |
+| `STATUS: COMPLETE` | Entire project is done |
 
 ---
 
-## Configuração por projeto (`.ralph.env`)
+## Per-Project Configuration (`.ralph.env`)
 
-Crie `.ralph.env` no diretório do projeto para sobrescrever configurações:
+Create `.ralph.env` in your project directory to override defaults:
 
 ```bash
-# .ralph.env — opcional, para projetos sem ## [agente] no fix_plan
-COPILOT_AGENT="desenvolvedor"                          # agente fixo (fallback)
-COPILOT_ALLOWED_TOOLS="create,view,edit,bash,glob,grep"  # ferramentas disponíveis
+# .ralph.env
+COPILOT_AGENT="my-agent"                               # fixed agent (fallback when no ## [agent] in fix_plan)
+COPILOT_ALLOWED_TOOLS="create,view,edit,bash,glob,grep"  # available tools
 ```
 
-> **Nota**: quando `@fix_plan.md` usa a sintaxe `## [agente]`, o `COPILOT_AGENT` do `.ralph.env` é ignorado e o agente é sempre lido do fix_plan.
+> When `@fix_plan.md` uses `## [agent]` syntax, `COPILOT_AGENT` in `.ralph.env` is ignored — the agent is always read from the fix_plan.
 
 ---
 
-## Exemplos
+## Examples
 
-### `examples/abb-multiagente/`
-Pipeline completo ABB com 3 agentes:
+### `examples/multi-agent/`
+A complete 3-phase pipeline using generic agents:
 ```
-pesquisador → desenvolvedor → publicacao_confluence
+researcher → developer → reviewer
+  Phase 1     Phase 2    Phase 3
 ```
-- `.ralph.env` com configuração
-- `prompts/01_pesquisa.md`, `prompts/02_geracao.md`, `prompts/03_publicacao.md`
-- `@fix_plan.md` com seções `## [agente]`
+Includes `@fix_plan.md`, per-phase prompt files, and `.ralph.env`.
+
+### `examples/rest-api/` and `examples/simple-cli-tool/`
+Single-agent examples from the original frankbria project.
 
 ---
 
-## Diferenças em relação ao projeto original
+## Differences from the Original Project
 
-| Aspecto | frankbria/ralph-claude-code | xavanty/ralph_copilot |
-|---------|-----------------------------|-----------------------|
-| Runtime de IA | Claude Code | GitHub Copilot CLI |
-| Nomes de ferramentas | `write`, `read`, `shell` | `create`, `view`, `edit`, `bash` |
-| Continuidade de sessão | `--continue` / `--resume` | `COPILOT_USE_CONTINUE=false` (evita conflito com sessão pai) |
-| Detecção de conclusão | keywords + EXIT_SIGNAL | EXIT_SIGNAL explícito (keywords ignoradas quando EXIT_SIGNAL: false) |
-| Agentes | Claude Code subagents | `~/.copilot/agents/` + `--agent` flag |
-| Orquestração multi-agente | não nativo | via `## [agente]` no `@fix_plan.md` |
+| Aspect | frankbria/ralph-claude-code | xavanty/ralph_copilot |
+|--------|-----------------------------|-----------------------|
+| AI runtime | Claude Code | GitHub Copilot CLI |
+| Tool names | `write`, `read`, `shell` | `create`, `view`, `edit`, `bash` |
+| Session continuity | `--continue` / `--resume` | `COPILOT_USE_CONTINUE=false` |
+| Exit detection | keywords + EXIT_SIGNAL | EXIT_SIGNAL explicit (keywords ignored when `EXIT_SIGNAL: false`) |
+| Agents | Claude Code subagents | `~/.copilot/agents/` + `--agent` flag |
+| Multi-agent orchestration | not native | via `## [agent]` in `@fix_plan.md` |
 
-### Bugs corrigidos
+### Bugs Fixed
 
-**Bug #1 — `has_completion_signal` falso positivo** (`lib/response_analyzer.sh`)  
-Keyword detection era executada mesmo quando `EXIT_SIGNAL: false` estava explícito no RALPH_STATUS,  
-causando saída prematura do loop.  
-*Fix: detecção por keywords só ocorre quando não há EXIT_SIGNAL explícito.*
+**Bug #1 — False positive `has_completion_signal`** (`lib/response_analyzer.sh`)  
+Keyword detection ran even when `EXIT_SIGNAL: false` was explicit in RALPH_STATUS, causing premature loop exit.  
+*Fix: keyword detection only runs when no explicit EXIT_SIGNAL is present.*
 
-**Bug #2 — Conflito de sessão HTTP 400** (`ralph_loop.sh`)  
-Loop 2 tentava resumir a sessão pai do Copilot CLI (a sessão do usuário atual),  
-que tinha `tool_use` pendentes → erro HTTP 400 "tool_use without tool_result".  
-*Fix: `COPILOT_USE_CONTINUE=false` — cada loop começa sessão nova.*
+**Bug #2 — HTTP 400 session conflict** (`ralph_loop.sh`)  
+Loop 2 tried to resume the parent Copilot CLI session, which had pending `tool_use` blocks → HTTP 400 error.  
+*Fix: `COPILOT_USE_CONTINUE=false` — each loop starts a fresh session.*
 
-**Bug #3 — Nomes de ferramentas incorretos** (`ralph_loop.sh`)  
-`--available-tools` usava nomes do Claude Code (`write`, `read`, `shell`) que não existem no Copilot CLI,  
-desativando efetivamente todas as ferramentas de I/O.  
+**Bug #3 — Invalid tool names** (`ralph_loop.sh`)  
+`--available-tools` used Claude Code names (`write`, `read`, `shell`) which don't exist in Copilot CLI.  
 *Fix: `COPILOT_ALLOWED_TOOLS="create,view,edit,bash,glob,grep"`*
 
 ---
 
-## Estrutura do projeto
+## Project Structure
 
 ```
 ralph_copilot/
-├── ralph_loop.sh          # Loop principal — lê @fix_plan.md, detecta agente, chama copilot
-├── install.sh             # Instala ralph, ralph-setup, ralph-monitor globalmente
-├── setup.sh               # Usado por ralph-setup para criar novo projeto
+├── ralph_loop.sh             # Main loop — reads @fix_plan.md, detects agent, calls copilot
+├── install.sh                # Installs ralph, ralph-setup, ralph-monitor globally
+├── setup.sh                  # Used by ralph-setup to scaffold a new project
 ├── lib/
-│   ├── response_analyzer.sh  # Analisa saída JSONL do copilot, detecta RALPH_STATUS
-│   ├── circuit_breaker.sh    # Previne loops infinitos (abre após N loops sem progresso)
-│   └── date_utils.sh         # Utilitários de data/hora
+│   ├── response_analyzer.sh  # Parses copilot JSONL output, detects RALPH_STATUS
+│   ├── circuit_breaker.sh    # Prevents infinite loops
+│   └── ...
 ├── templates/
-│   ├── PROMPT.md          # Template de PROMPT.md para novos projetos
-│   ├── fix_plan.md        # Template de @fix_plan.md para novos projetos
-│   ├── AGENT.md           # Template de @AGENT.md
-│   └── modelo_abb.html    # Template HTML para geração de ABBs de segurança
+│   ├── PROMPT.md             # PROMPT.md template for new projects
+│   └── fix_plan.md           # @fix_plan.md template for new projects
 ├── examples/
-│   └── abb-multiagente/   # Exemplo completo: pesquisador → desenvolvedor → publicacao_confluence
-└── README-COPILOT.md      # Documentação detalhada das adaptações
+│   ├── multi-agent/          # 3-phase multi-agent pipeline example
+│   ├── rest-api/             # Single-agent REST API example
+│   └── simple-cli-tool/      # Single-agent CLI tool example
+└── PROMPT.md.example         # Full annotated PROMPT.md template
 ```
 
 ---
 
-## Créditos
+## Credits
 
-Baseado em **[ralph-claude-code](https://github.com/frankbria/ralph-claude-code)** por [@frankbria](https://github.com/frankbria).  
-Adaptado para GitHub Copilot CLI por [@xavanty](https://github.com/xavanty).
+Based on [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code) by [Frank Bria](https://github.com/frankbria).  
+This fork adapts Ralph for GitHub Copilot CLI and adds multi-agent orchestration via `@fix_plan.md`.
 
 ---
 
-## Licença
+## License
 
-MIT — veja [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE).
